@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Screen Time</title>  
+  <link rel="shortcut icon" href="img/logo.png" type="image/x-icon">
+    <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    /* Grayscale logos for minimalistic look */
+    .app-logo {
+      width: 40px;
+      height: 40px;
+      object-fit: contain;
+      filter: grayscale(100%);
+    }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+  <div class="container mx-auto p-4">
+    <h2 class="text-3xl font-bold mb-8 text-center">Screen Time Dashboard</h2>
+
+    <div id="categories" class="space-y-10"></div>
+  </div>
+
+  <script>
+    function formatHours(decimalHours) {
+      const h = Math.floor(decimalHours);
+      const m = Math.round((decimalHours - h) * 60);
+      return `${h}h ${m}m`;
+    }
+
+    // Screen time data with new Game Apps category
+    const screenTimeData = {
+      "Social Media": {
+        "Instagram": { hours: 5.25, icon: "fa-brands fa-instagram" },
+        "YouTube": { hours: 5.5, icon: "fa-brands fa-youtube" },
+        "TikTok": { hours: 5.6, icon: "fa-brands fa-tiktok" }
+      },
+      "Chat / Google Apps": {
+        "WhatsApp": { hours: 2.1, icon: "fa-brands fa-whatsapp" },
+        "Gmail": { hours: 1.5, icon: "fa-brands fa-google" },
+        "ChatGPT": { hours: 2.5, icon: "fa-solid fa-robot" }
+      },
+      "Apple Apps": {
+        "Safari": { hours: 3.3, icon: "fa-brands fa-safari" },
+        "Music": { hours: 2.2, icon: "fa-solid fa-music" },
+        "Calendar": { hours: 1.75, icon: "fa-regular fa-calendar" }
+      },
+      "Game Apps": {
+        "Clash of Clans": { hours: 2.8, icon: "fa-solid fa-shield" },
+        "Candy Crush": { hours: 1.9, icon: "fa-solid fa-candy-cane" },
+        "Subway Surfers": { hours: 3.4, icon: "fa-solid fa-train-subway" }
+      }
+    };
+
+    const container = document.getElementById('categories');
+
+    for (const [category, apps] of Object.entries(screenTimeData)) {
+      const catDiv = document.createElement('div');
+      catDiv.className = "space-y-4";
+
+      const title = document.createElement('h3');
+      title.className = "text-2xl font-semibold text-gray-700 border-b border-gray-300 pb-2";
+      title.textContent = category;
+      catDiv.appendChild(title);
+
+      // Total hours for this category
+      const totalHours = Object.values(apps).reduce((sum, a) => sum + a.hours, 0);
+
+      for (const [app, data] of Object.entries(apps)) {
+        const row = document.createElement('div');
+        row.className = "flex flex-col sm:flex-row items-center sm:items-end gap-4";
+
+        const iconDiv = document.createElement('div');
+        iconDiv.className = "w-12 flex justify-center text-2xl text-gray-700";
+        iconDiv.innerHTML = `<i class="${data.icon}"></i>`;
+
+        const barContainer = document.createElement('div');
+        barContainer.className = "flex-1 bg-gray-300 rounded-full h-10 relative";
+
+        const usagePercent = ((data.hours / totalHours) * 100).toFixed(0);
+
+        const bar = document.createElement('div');
+        bar.className = "bg-blue-500 h-10 rounded-full flex items-center justify-end pr-3 text-white font-semibold";
+        bar.style.width = usagePercent + '%';
+        bar.textContent = `${formatHours(data.hours)} (${usagePercent}%)`;
+
+        barContainer.appendChild(bar);
+        row.appendChild(iconDiv);
+        row.appendChild(barContainer);
+        catDiv.appendChild(row);
+      }
+
+      container.appendChild(catDiv);
+    }
+  </script>
+<footer class="bg-gray-800 text-white py-4">
+    <div class="container mx-auto text-center">
+      &copy; 2024 Screen Time Dashboard. All rights reserved.
+    </div>
+  </footer>
+</body>
+</html>
