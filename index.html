@@ -21,10 +21,29 @@
 </head>
 <body class="bg-gray-100 min-h-screen">
 
-  <div class="container mx-auto p-4">
-    <h2 class="text-3xl font-bold mb-8 text-center">Screen Time Dashboard</h2>
+  <div class="container mx-auto p-4 max-w-2xl">
+    <h2 class="text-2xl font-bold mb-2 text-center text-gray-900">Screen Time</h2>
 
-    <div id="categories" class="space-y-10"></div>
+    <div id="totalTime" class="p-8 mb-0 text-center"> 
+      <p class="text-gray-600 text-sm mb-1">Total Screen Time (This Week)</p>
+      <p class="text-3xl font-bold text-gray-900" id="totalHours"></p>
+    </div>
+
+    <div id="averageTime" class="p-6 -mt-10 mb-6 text-center">
+      <p class="text-gray-600 text-sm mb-2">Average Per Day</p>
+      <p class="text-2xl font-bold text-blue-600" id="averageHours"></p>
+    </div>
+
+    <div class="flex items-center justify-between mb-4">
+      <p class="text-gray-600 font-medium">All Apps</p>
+      <label class="flex items-center gap-2 cursor-pointer">
+        <span class="text-sm text-gray-600">Show Categories</span>
+        <input type="checkbox" id="showCategories" class="w-4 h-4 rounded">
+      </label>
+    </div>
+
+    <div id="appsList" class="bg-white rounded-2xl shadow-sm overflow-hidden divide-y divide-gray-100"></div>
+    <div id="categoriesView" class="hidden space-y-4"></div>
   </div>
 
   <script>
@@ -37,69 +56,176 @@
     // Screen time data with new Game Apps category
     const screenTimeData = {
       "Social Media": {
-        "Instagram": { hours: 5.25, icon: "fa-brands fa-instagram" },
-        "YouTube": { hours: 5.5, icon: "fa-brands fa-youtube" },
-        "TikTok": { hours: 5.6, icon: "fa-brands fa-tiktok" }
+        "Instagram": { hours: 12, icon: "fa-brands fa-instagram", color: "from-pink-400 to-purple-600" },
+        "YouTube": { hours: 4.8, icon: "fa-brands fa-youtube", color: "from-red-500 to-red-700" },
+        "Facebook": { hours: 7.2, icon: "fa-brands fa-facebook", color: "from-blue-500 to-blue-700" }
       },
       "Chat / Google Apps": {
-        "WhatsApp": { hours: 2.1, icon: "fa-brands fa-whatsapp" },
-        "Gmail": { hours: 1.5, icon: "fa-brands fa-google" },
-        "ChatGPT": { hours: 2.5, icon: "fa-solid fa-robot" }
-      },
-      "Apple Apps": {
-        "Safari": { hours: 3.3, icon: "fa-brands fa-safari" },
-        "Music": { hours: 2.2, icon: "fa-solid fa-music" },
-        "Calendar": { hours: 1.75, icon: "fa-regular fa-calendar" }
+        "WhatsApp": { hours: 3.4, icon: "fa-brands fa-whatsapp", color: "from-green-400 to-green-600" },
+        "Gmail": { hours: 2.55, icon: "fa-brands fa-google", color: "from-red-400 to-yellow-500" },
+        "ChatGPT": { hours: 8.2, icon: "fa-brands fa-openai", color: "from-green-500 to-emerald-600" }
       },
       "Game Apps": {
-        "Clash of Clans": { hours: 2.8, icon: "fa-solid fa-shield" },
-        "Candy Crush": { hours: 1.9, icon: "fa-solid fa-candy-cane" },
-        "Subway Surfers": { hours: 3.4, icon: "fa-solid fa-train-subway" }
+        "Clash of Clans": { hours: 2.8, icon: "fa-solid fa-crown", color: "from-yellow-500 to-orange-600" },
+        "Car Racing": { hours: 2.5, icon: "fa-solid fa-car", color: "from-red-500 to-orange-600" },
+        "Subway Surfers": { hours: 3.4, icon: "fa-solid fa-person-running", color: "from-orange-400 to-yellow-600" }
       }
     };
 
-    const container = document.getElementById('categories');
+    let allAppsData = [];
+    let totalScreenTime = 0;
+    const appListContainer = document.getElementById('appsList');
+    const categoriesContainer = document.getElementById('categoriesView');
 
+    // First pass: collect all apps and calculate total
     for (const [category, apps] of Object.entries(screenTimeData)) {
-      const catDiv = document.createElement('div');
-      catDiv.className = "space-y-4";
-
-      const title = document.createElement('h3');
-      title.className = "text-2xl font-semibold text-gray-700 border-b border-gray-300 pb-2";
-      title.textContent = category;
-      catDiv.appendChild(title);
-
-      // Total hours for this category
-      const totalHours = Object.values(apps).reduce((sum, a) => sum + a.hours, 0);
-
       for (const [app, data] of Object.entries(apps)) {
-        const row = document.createElement('div');
-        row.className = "flex flex-col sm:flex-row items-center sm:items-end gap-4";
+        allAppsData.push({ app, category, ...data });
+        totalScreenTime += data.hours;
+      }
+    }
 
-        const iconDiv = document.createElement('div');
-        iconDiv.className = "w-12 flex justify-center text-2xl text-gray-700";
-        iconDiv.innerHTML = `<i class="${data.icon}"></i>`;
+    // Sort apps by hours (descending)
+    allAppsData.sort((a, b) => b.hours - a.hours);
 
-        const barContainer = document.createElement('div');
-        barContainer.className = "flex-1 bg-gray-300 rounded-full h-10 relative";
+    // Function to create app item element
+    function createAppItem(appData, isInCategory = false) {
+      const appItem = document.createElement('div');
+      appItem.className = "p-4 flex flex-col gap-3 hover:bg-gray-50 transition";
 
-        const usagePercent = ((data.hours / totalHours) * 100).toFixed(0);
+      const appTop = document.createElement('div');
+      appTop.className = "flex items-center justify-between";
 
-        const bar = document.createElement('div');
-        bar.className = "bg-blue-500 h-10 rounded-full flex items-center justify-end pr-3 text-white font-semibold";
-        bar.style.width = usagePercent + '%';
-        bar.textContent = `${formatHours(data.hours)} (${usagePercent}%)`;
+      const appLeft = document.createElement('div');
+      appLeft.className = "flex items-center gap-4 flex-1";
 
-        barContainer.appendChild(bar);
-        row.appendChild(iconDiv);
-        row.appendChild(barContainer);
-        catDiv.appendChild(row);
+      const iconDiv = document.createElement('div');
+      iconDiv.className = `flex items-center justify-center w-12 h-12 text-2xl text-white rounded-xl bg-gradient-to-br ${appData.color}`;
+      
+      // Special handling for ChatGPT with favicon-style logo
+      if (appData.app === 'ChatGPT') {
+        iconDiv.innerHTML = `<svg viewBox="0 0 24 24" fill="white" class="w-6 h-6"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm4-8c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm0 8c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm-4-4c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/></svg>`;
+      } else if (appData.app === 'Gmail') {
+        iconDiv.innerHTML = `<svg viewBox="0 0 24 24" fill="white" class="w-6 h-6"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>`;
+      } else {
+        iconDiv.innerHTML = `<i class="${appData.icon}"></i>`;
       }
 
-      container.appendChild(catDiv);
+      const appInfo = document.createElement('div');
+
+      const appName = document.createElement('p');
+      appName.className = "text-gray-900 font-medium text-sm";
+      appName.textContent = appData.app;
+
+      let usagePercent;
+      let percentText;
+      
+      if (isInCategory) {
+        // For category view, show percentage within category
+        const categoryTotal = Object.values(screenTimeData[appData.category]).reduce((sum, a) => sum + a.hours, 0);
+        usagePercent = ((appData.hours / categoryTotal) * 100).toFixed(0);
+        percentText = `${usagePercent}%`;
+      } else {
+        // For all apps view, show percentage of total and category
+        usagePercent = ((appData.hours / totalScreenTime) * 100).toFixed(0);
+        percentText = `${usagePercent}% • ${appData.category}`;
+      }
+
+      const appPercent = document.createElement('p');
+      appPercent.className = "text-gray-500 text-xs mt-1";
+      appPercent.textContent = percentText;
+
+      appInfo.appendChild(appName);
+      appInfo.appendChild(appPercent);
+      appLeft.appendChild(iconDiv);
+      appLeft.appendChild(appInfo);
+
+      const hoursText = document.createElement('p');
+      hoursText.className = "text-gray-900 font-semibold text-sm whitespace-nowrap";
+      hoursText.textContent = formatHours(appData.hours);
+
+      appTop.appendChild(appLeft);
+      appTop.appendChild(hoursText);
+
+      const barContainer = document.createElement('div');
+      barContainer.className = "bg-gray-200 rounded-full h-2.5 w-full";
+
+      const barFill = document.createElement('div');
+      barFill.className = `bg-gradient-to-r ${appData.color} h-full rounded-full`;
+      barFill.style.width = usagePercent + '%';
+      barContainer.appendChild(barFill);
+
+      appItem.appendChild(appTop);
+      appItem.appendChild(barContainer);
+
+      return appItem;
     }
+
+    // Build flat list view (all apps sorted by most used)
+    allAppsData.forEach(appData => {
+      appListContainer.appendChild(createAppItem(appData, false));
+    });
+
+    // Build category view
+    for (const [category, apps] of Object.entries(screenTimeData)) {
+      const totalHours = Object.values(apps).reduce((sum, a) => sum + a.hours, 0);
+
+      const categorySection = document.createElement('div');
+      categorySection.className = "bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden";
+
+      // Category header
+      const header = document.createElement('div');
+      header.className = "p-4 flex items-center justify-between";
+      header.style.borderBottom = "1px solid #f3f4f6";
+
+      const headerLeft = document.createElement('div');
+      headerLeft.className = "flex-1";
+
+      const categoryName = document.createElement('p');
+      categoryName.className = "text-gray-900 font-semibold text-base";
+      categoryName.textContent = category;
+
+      const categoryTime = document.createElement('p');
+      categoryTime.className = "text-gray-500 text-sm mt-1";
+      categoryTime.textContent = formatHours(totalHours);
+
+      headerLeft.appendChild(categoryName);
+      headerLeft.appendChild(categoryTime);
+      header.appendChild(headerLeft);
+
+      // Apps list
+      const appsList = document.createElement('div');
+      appsList.className = "divide-y divide-gray-100";
+
+      for (const [app, data] of Object.entries(apps)) {
+        const appData = { app, category, ...data };
+        appsList.appendChild(createAppItem(appData, true));
+      }
+
+      categorySection.appendChild(header);
+      categorySection.appendChild(appsList);
+      categoriesContainer.appendChild(categorySection);
+    }
+
+    // Update total time
+    document.getElementById('totalHours').textContent = formatHours(totalScreenTime);
+
+    // Calculate and update average time per day (based on 7 days per week)
+    const averageHoursPerDay = totalScreenTime / 7;
+    document.getElementById('averageHours').textContent = formatHours(averageHoursPerDay);
+
+    // Toggle between views
+    document.getElementById('showCategories').addEventListener('change', function(e) {
+      if (e.target.checked) {
+        appListContainer.classList.add('hidden');
+        categoriesContainer.classList.remove('hidden');
+      } else {
+        appListContainer.classList.remove('hidden');
+        categoriesContainer.classList.add('hidden');
+      }
+    });
   </script>
-<footer class="bg-gray-800 text-white py-4">
+<footer class="text-black-500 py-4">
     <div class="container mx-auto text-center">
       &copy; 2024 Screen Time Dashboard. All rights reserved.
     </div>
